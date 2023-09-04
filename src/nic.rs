@@ -1,7 +1,7 @@
 use std::io;
 use bytes::{BytesMut, BufMut};
 
-use futures::{stream::{StreamExt, SplitSink, SplitStream}, SinkExt};
+use futures::{stream::{StreamExt, SplitSink}, SinkExt};
 
 use tokio::time::{sleep, Duration};
 use tokio_util::codec::{Encoder, Decoder, Framed};
@@ -17,8 +17,11 @@ impl Decoder for NicCodec {
     type Error = io::Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        println!("decoding {:?}", src);
-        Ok(Some(src.to_vec()))
+        if src.len() == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(src.split_to(src.len()).to_vec()))
+        }
     }
 }
 
@@ -26,7 +29,6 @@ impl Encoder<Vec<u8>> for NicCodec {
     type Error = io::Error;
 
     fn encode(&mut self, item: Vec<u8>, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        println!("encoding {:?}", &item);
         dst.reserve(item.len());
         dst.put(&item[..]);
         Ok(())
@@ -41,7 +43,6 @@ pub struct Nic {
     nic_type: NicType,
     mtu: u16,
     tx: SplitSink<Framed<SerialStream, NicCodec>, Vec<u8>>,
-    rx: SplitStream<Framed<SerialStream, NicCodec>>
 }
 
 #[allow(dead_code)]
@@ -52,13 +53,24 @@ impl Nic {
         port.set_exclusive(false)?;
 
         let stream = NicCodec.framed(port);
-        let (tx, rx) = stream.split();
+        let (mut tx, mut rx) = stream.split();
 
-        Ok(Nic { name, nic_type, mtu, tx, rx })
+        tokio::spawn(async move {
+            loop {
+                let item = rx.next()
+                    .await
+                    .unwrap()
+                    .unwrap();
+                println!("{:?}", item);
+            }
+        });
+
+        Ok(Nic { name, nic_type, mtu, tx })
     }
 
     // NIC から出力
     pub async fn send(&mut self, data: Vec<u8>) -> tokio_serial::Result<()> {
+        sleep(Duration::from_millis(1)).await;
         self.tx.send(data).await?;
         sleep(Duration::from_millis(1)).await;
 
