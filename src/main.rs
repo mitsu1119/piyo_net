@@ -1,15 +1,12 @@
 mod nic;
-use nic::{ Nic, NicType };
+use nic::{Nic, NicType};
 
-fn main() {
-    let mut nic = Nic::new("ttyAMA0".to_string(), NicType::ETHERNET, 16, "/dev/ttyAMA0".to_string());
+const DEFAULT_TTY: &str = "/dev/ttyAMA0";
 
+#[tokio::main]
+async fn main() {
+    let nic = Nic::new("ttyAMA0".to_string(), NicType::ETHERNET, 8, DEFAULT_TTY.to_string())
+        .await
+        .expect("Failed to create NIC");
     println!("{:?}", nic);
-
-    let payload: &[u8] = &[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    nic.transmit(payload);
-
-    loop {
-        println!("{:?}", nic.recv());
-    }
 }
