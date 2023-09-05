@@ -3,7 +3,7 @@ use bytes::{BytesMut, BufMut};
 
 use futures::{stream::{StreamExt, SplitSink}, SinkExt};
 
-use tokio::time::{sleep, Duration};
+use tokio::time::{sleep, Duration, timeout};
 use tokio_util::codec::{Encoder, Decoder, Framed};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
@@ -53,15 +53,26 @@ impl Nic {
         port.set_exclusive(false)?;
 
         let stream = NicCodec.framed(port);
-        let (mut tx, mut rx) = stream.split();
+        let (tx, mut rx) = stream.split();
 
         tokio::spawn(async move {
             loop {
-                let item = rx.next()
+                let mut item = rx.next()
                     .await
                     .unwrap()
                     .unwrap();
-                println!("{:?}", item);
+                loop {
+                    let framer = rx.next();
+                    match timeout(Duration::from_millis(1), framer).await {
+                        Ok(additional) => {
+                            item.append(&mut additional.unwrap().unwrap());
+                        },
+                        Err(_) => {
+                            break;
+                        }
+                    }
+                }
+                println!("received frame: {:?}", item);
             }
         });
 

@@ -4,7 +4,7 @@ use nic::{Nic, NicType};
 const DEFAULT_TTY: &str = "/dev/ttyAMA0";
 
 async fn send(nic: &mut Nic) {
-    nic.send(vec![0x41; 5])
+    nic.send(vec![0x41; 100])
         .await
         .expect("Failed to send.");
 }
@@ -15,7 +15,7 @@ async fn main() {
         .expect("Failed to create NIC");
     println!("{:?}", nic);
 
-    for i in 0..5 {
+    for _ in 0..5 {
         send(&mut nic).await;
     }
 
