@@ -3,6 +3,8 @@ use bytes::{BytesMut, BufMut};
 
 use futures::{stream::{StreamExt, SplitSink}, SinkExt};
 
+use tokio::signal::unix::{signal, SignalKind};
+
 use tokio::time::{sleep, Duration, timeout};
 use tokio_util::codec::{Encoder, Decoder, Framed};
 
@@ -55,6 +57,7 @@ impl Nic {
         let stream = NicCodec.framed(port);
         let (tx, mut rx) = stream.split();
 
+        // フレーム受信用のスレッド
         tokio::spawn(async move {
             loop {
                 let mut item = rx.next()
@@ -76,10 +79,20 @@ impl Nic {
             }
         });
 
+        // シグナル受信用のスレッド
+        let mut sigint = signal(SignalKind::interrupt())?;
+        tokio::spawn(async move {
+            loop {
+                if let Some(_) = sigint.recv().await {
+                    println!("SIGINT");
+                };
+            }
+        });
+
         Ok(Nic { name, nic_type, mtu, tx })
     }
 
-    // NIC から出力
+    // NIC からフレームを送信
     pub async fn send(&mut self, data: Vec<u8>) -> tokio_serial::Result<()> {
         sleep(Duration::from_millis(1)).await;
         self.tx.send(data).await?;
