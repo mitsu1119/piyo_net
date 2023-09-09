@@ -10,6 +10,8 @@ use tokio_util::codec::{Encoder, Decoder, Framed};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 
+use piyo_net::TestTrait;
+
 // シリアル通信のコーデック
 #[derive(Debug, Copy, Clone)]
 struct NicCodec;
@@ -45,6 +47,9 @@ pub struct Nic {
     nic_type: NicType,
     mtu: u16,
     tx: SplitSink<Framed<SerialStream, NicCodec>, Vec<u8>>,
+}
+
+impl TestTrait for Nic {
 }
 
 #[allow(dead_code)]

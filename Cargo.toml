@@ -1,7 +1,11 @@
 [package]
-name = "piyo_nic"
+name = "piyo_net"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "piyo_nic"
+path = "src/piyonic_main.rs"
 
 [dependencies]
 bytes = "1.4.0"
