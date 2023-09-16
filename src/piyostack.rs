@@ -2,6 +2,9 @@ use std::error;
 use std::fmt;
 use piyo_net::process::search_processes;
 
+use nix::sys::signal::{Signal, kill};
+use nix::unistd::Pid;
+
 type Result<T> = std::result::Result<T, PiyoStackError>;
 
 // PiyoStack のエラー型
@@ -31,7 +34,9 @@ impl PiyoStack {
 
     pub fn connect(&self) -> Result<()> {
         let Some(nics) = search_processes("piyo_nic") else { return Err(PiyoStackError); };
-        println!("{:?}", nics);
+
+        let pid = Pid::from_raw(nics[0]);
+        kill(pid, Signal::SIGUSR1);
 
         Ok(())
     }

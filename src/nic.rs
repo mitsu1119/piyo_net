@@ -109,7 +109,7 @@ impl Nic {
                         }
                     };
                     println!("ports: {:?}", ports);
-                    println!("SIGINT");
+                    println!("SIGUSR1");
                 };
             }
         });
