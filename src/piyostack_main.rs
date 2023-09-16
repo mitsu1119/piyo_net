@@ -1,6 +1,9 @@
-use piyo_net::process::search_processes;
+mod piyostack;
+use piyostack::PiyoStack;
 
 fn main() {
-    let ps = search_processes("vim");
-    println!("{:?}", ps);
+    let stack = PiyoStack::new();
+    println!("{:?}", stack);
+
+    stack.connect().expect("Failed to connect to NIC");
 }
