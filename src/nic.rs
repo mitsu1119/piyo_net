@@ -13,7 +13,7 @@ use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use piyo_net::VecEnv;
 
 // シリアル通信のコーデック
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 struct NicCodec;
 
 impl Decoder for NicCodec {
@@ -39,6 +39,20 @@ impl Encoder<Vec<u8>> for NicCodec {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+struct NicSignalHandlerDevice {
+    name: String
+}
+
+impl<'a> VecEnv<'a, u16> for NicSignalHandlerDevice {
+    // プロトコルスタックとやり取りするための環境変数名を取得
+    fn get_ports_env_name(&self) -> String {
+        let env_name_base: &str = "PIYONIC_PORTS_";
+        env_name_base.to_string() + &self.name
+    }
+}
+
 // NIC 構造体
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -47,14 +61,6 @@ pub struct Nic {
     nic_type: NicType,
     mtu: u16,
     tx: SplitSink<Framed<SerialStream, NicCodec>, Vec<u8>>,
-}
-
-impl<'a> VecEnv<'a, u16> for Nic {
-    // プロトコルスタックとやり取りするための環境変数名を取得
-    fn get_ports_env_name(&self) -> String {
-        let env_name_base: &str = "PIYONIC_PORTS_";
-        env_name_base.to_string() + &self.name
-    }
 }
 
 #[allow(dead_code)]
@@ -91,9 +97,18 @@ impl Nic {
 
         // シグナル受信用のスレッド
         let mut sigint = signal(SignalKind::interrupt())?;
+        let signal_handler_device = NicSignalHandlerDevice { name: name.clone() };
         tokio::spawn(async move {
             loop {
                 if let Some(_) = sigint.recv().await {
+                    let ports = match signal_handler_device.get_env() {
+                        Ok(ports) => ports,
+                        Err(_) => {
+                            signal_handler_device.create_empty_env();
+                            signal_handler_device.get_env().unwrap()
+                        }
+                    };
+                    println!("ports: {:?}", ports);
                     println!("SIGINT");
                 };
             }
