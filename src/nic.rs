@@ -10,7 +10,7 @@ use tokio_util::codec::{Encoder, Decoder, Framed};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 
-use piyo_net::TestTrait;
+use piyo_net::VecEnv;
 
 // シリアル通信のコーデック
 #[derive(Debug, Copy, Clone)]
@@ -49,7 +49,12 @@ pub struct Nic {
     tx: SplitSink<Framed<SerialStream, NicCodec>, Vec<u8>>,
 }
 
-impl TestTrait for Nic {
+impl<'a> VecEnv<'a, u16> for Nic {
+    // プロトコルスタックとやり取りするための環境変数名を取得
+    fn get_ports_env_name(&self) -> String {
+        let env_name_base: &str = "PIYONIC_PORTS_";
+        env_name_base.to_string() + &self.name
+    }
 }
 
 #[allow(dead_code)]
