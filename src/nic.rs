@@ -96,7 +96,7 @@ impl Nic {
         });
 
         // シグナル受信用のスレッド
-        let mut sigint = signal(SignalKind::interrupt())?;
+        let mut sigint = signal(SignalKind::user_defined1())?;
         let signal_handler_device = NicSignalHandlerDevice { name: name.clone() };
         tokio::spawn(async move {
             loop {
