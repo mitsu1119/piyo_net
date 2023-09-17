@@ -1,6 +1,6 @@
 use std::error;
 use std::fmt;
-use piyo_net::process::search_processes;
+use crate::process::search_processes;
 
 use nix::sys::signal::{Signal, kill};
 use nix::unistd::Pid;

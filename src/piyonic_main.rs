@@ -1,5 +1,4 @@
-mod nic;
-use nic::{Nic, NicType};
+use piyo_net::piyo_nic::{Nic, NicType};
 
 const DEFAULT_TTY: &str = "/dev/ttyAMA0";
 

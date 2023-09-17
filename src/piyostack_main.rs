@@ -1,5 +1,4 @@
-mod piyostack;
-use piyostack::PiyoStack;
+use piyo_net::piyo_stack::PiyoStack;
 
 fn main() {
     let stack = PiyoStack::new();
