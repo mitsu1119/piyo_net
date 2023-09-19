@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, result, fmt, error};
 use bytes::{BytesMut, BufMut};
 
 use futures::{stream::{StreamExt, SplitSink}, SinkExt};
@@ -11,6 +11,42 @@ use tokio_util::codec::{Encoder, Decoder, Framed};
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 
 use crate::util::VecEnv;
+
+type Result<T> = result::Result<T, PiyoNicError>;
+
+// PiyoNic のエラー型
+#[derive(Debug)]
+pub enum PiyoNicError {
+    IOError(io::Error),
+    SerialError(tokio_serial::Error)
+}
+
+impl fmt::Display for PiyoNicError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            PiyoNicError::IOError(ref e) => write!(f, "PiyoNic IOError: {}", e),
+            PiyoNicError::SerialError(ref e) => write!(f, "PiyoNic SerialError: {}", e)
+        }
+    }
+}
+
+impl From<tokio_serial::Error> for PiyoNicError {
+    fn from(e: tokio_serial::Error) -> Self {
+        PiyoNicError::SerialError(e)
+    }
+}
+
+impl From<io::Error> for PiyoNicError {
+    fn from(e: io::Error) -> Self {
+        PiyoNicError::IOError(e)
+    }
+}
+
+impl error::Error for PiyoNicError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
+    }
+}
 
 
 // NIC とプロトコルスタックがシグナルでやり取りするためのデバイス
@@ -42,7 +78,7 @@ impl Decoder for NicCodec {
     type Item = Vec<u8>;
     type Error = io::Error;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+    fn decode(&mut self, src: &mut BytesMut) -> result::Result<Option<Self::Item>, Self::Error> {
         if src.len() == 0 {
             Ok(None)
         } else {
@@ -54,7 +90,7 @@ impl Decoder for NicCodec {
 impl Encoder<Vec<u8>> for NicCodec {
     type Error = io::Error;
 
-    fn encode(&mut self, item: Vec<u8>, dst: &mut BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, item: Vec<u8>, dst: &mut BytesMut) -> result::Result<(), Self::Error> {
         dst.reserve(item.len());
         dst.put(&item[..]);
         Ok(())
@@ -126,7 +162,7 @@ impl Nic {
     }
 
     // NIC からフレームを送信
-    pub async fn send(&mut self, data: Vec<u8>) -> tokio_serial::Result<()> {
+    pub async fn send(&mut self, data: Vec<u8>) -> Result<()> {
         sleep(Duration::from_millis(1)).await;
         self.tx.send(data).await?;
         sleep(Duration::from_millis(1)).await;
